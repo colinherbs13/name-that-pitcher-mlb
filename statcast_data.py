@@ -206,6 +206,9 @@ class Player:
         self.last = _modify_utf_chars(self.last)
         self.first = _modify_utf_chars(self.first)
 
+    def get_name(self):
+        return self.first + " " + self.last
+
     def set_team(self):
         """
         Gets team from raw_stats.
