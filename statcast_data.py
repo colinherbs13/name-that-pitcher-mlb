@@ -87,6 +87,7 @@ class Player:
     id(int): Statcast ID for player
     team(str): Player's current team abbreviation
     """
+
     def __init__(self, raw_stats):
         """
         Constructor for Player class, sets attributes and calls some functions to set specific attributes
@@ -97,6 +98,7 @@ class Player:
         self.last = None
         self.first = None
         self.raw_stats = raw_stats
+        print(self.raw_stats.keys())
         self.pitches = []
         self.id = raw_stats['mlbID']
         self.team = None
@@ -137,41 +139,39 @@ class Player:
 
         # data contains data for every pitch thrown by player in current season
         data = pb.statcast_pitcher(str(OPENING_DAY), str(TODAY), player_id=self.id)
-        print(data.keys())
         pitches = []
         velocities = []
         spins = []
-
+        locations = []
+        zones = []
+        print(data.keys())
         # iterate through each pitch and separate by type, velocity and spin rate
         for i in range(len(data)):
             pitch_data = data.iloc[i]
             pitch_type = pitch_data['pitch_type']
             pitch_velo = pitch_data['release_speed']
             pitch_spin = pitch_data['release_spin_rate']
+            pitch_loc = (pitch_data['plate_x'], pitch_data['plate_z'])
+            zone = (pitch_data['sz_top'], pitch_data['sz_bot'])
 
             # we need to check if we have already recorded pitch types, to calculate averages
             if pitch_type not in pitches:
                 pitches.append(pitch_type)
-                velocities.append((pitch_velo, 1))
-                spins.append((pitch_spin, 1))
+                velocities.append([pitch_velo])
+                spins.append([pitch_spin])
+                locations.append([pitch_loc])
+                zones.append([zone])
             else:
-                velo_sum = velocities[pitches.index(pitch_type)][0]
-                spin_sum = spins[pitches.index(pitch_type)][0]
-                count = velocities[pitches.index(pitch_type)][1]
-                count2 = spins[pitches.index(pitch_type)][1]
-
-                # Some pitches may return nan for some data points, make sure we track only the pitches that have data
-                if not math.isnan(pitch_spin):
-                    spins[pitches.index(pitch_type)] = (
-                        spin_sum + pitch_spin, count2 + 1)
-                if not math.isnan(pitch_velo):
-                    velocities[pitches.index(pitch_type)] = (velo_sum + pitch_velo, count + 1)
+                index = pitches.index(pitch_type)
+                velocities[index].append(pitch_velo)
+                spins[index].append(pitch_spin)
+                locations[index].append(pitch_loc)
+                zones[index].append(zone)
 
         # calculate the averages into Pitch object and place it in player arsenal
         for j in range(len(pitches)):
-            velo_avg = round((velocities[j][0] / velocities[j][1]), 1)
-            spin_avg = int(round((spins[j][0] / spins[j][1]), 0))
-            pitch = Pitch(PITCH_TYPES[pitches[j]], velo_avg, spin_avg)
+            index = pitches.index(pitches[j])
+            pitch = Pitch(PITCH_TYPES[pitches[j]], velocities[index], spins[index], locations[index], zones[index])
             self.pitches.append(pitch)
         return self.pitches
 
@@ -225,9 +225,9 @@ class Player:
             if len(league) > 1:
                 # If other team in list is in the NL, current team must be in AL (2 teams, 2 leagues)
                 if teams[0] in NATIONAL_LEAGUE:
-                    league = "AL"
-                else:
                     league = "NL"
+                else:
+                    league = "AL"
             else:
                 league = league[-1]
         else:
@@ -251,7 +251,8 @@ class Pitch:
     velo(float): Average pitch velocity (MPH)
     spin(int): Average spin rate of pitch (RPM)
     """
-    def __init__(self, p_type, velo, spin):
+
+    def __init__(self, p_type, velo, spin, loc, zone):
         """
         Constructor for Pitch class, sets attributes passed in when player pitch arsenal is gathered.
         :param p_type: pitch type
@@ -259,8 +260,10 @@ class Pitch:
         :param spin: average spin rate
         """
         self.p_type = p_type
-        self.velo = velo
-        self.spin = spin
+        self.velo = self._set_average_of(velo)
+        self.spin = self._set_average_of(spin)
+        self.locations = loc
+        self.zone = self._set_average_of(zone)
 
     def __str__(self):
         """
@@ -270,7 +273,26 @@ class Pitch:
         ret = "Pitch Type: " + self.p_type + "\n"
         ret += "Pitch Velo: " + str(self.velo) + "\n"
         ret += "Pitch Spin Rate: " + str(self.spin) + "\n"
+        ret += "Average Pitch Location: " + str(self._set_average_of(self.locations)) + "\n"
+        ret += "Average Strike Zone: " + str(self.zone) + "\n"
         return ret
+
+    def _set_average_of(self, ls):
+        """
+        sets the average of the given list ls
+        :param ls: list of datapoints
+        :return: returns average (either float or tuple depending on list)
+        """
+        length = len(ls)
+        if type(ls[0]) is tuple:
+            sum_x = 0
+            sum_y = 0
+            for point in ls:
+                sum_x += point[0]
+                sum_y += point[1]
+            return (sum_x / length, sum_y / length)
+        else:
+            return sum(ls) / len(ls)
 
 
 class Statcast:
@@ -279,6 +301,7 @@ class Statcast:
     Attributes - pitchers: list of active pitchers
     Public Methods - gather_pitchers(): used to gather active pitchers from bbref data
     """
+
     def __init__(self):
         self.pitchers = []
         self.gather_pitchers()
@@ -290,12 +313,10 @@ class Statcast:
         :return:
         """
         pitchers = pb.pitching_stats_bref(2023)
-        print(pitchers.keys())
+        print(pitchers.iloc[0]['Tm'])
         players = []
         for i in range(len(pitchers)):
             pitcher = pitchers.iloc[i]
             p = Player(pitcher)
             players.append(p)
         self.pitchers = players
-
-

@@ -8,10 +8,18 @@ class Game:
     def __init__(self):
         self.score = 0
         self.high_score = 0
+        self.strikes = 3
         self.hints = [True, True, True, True]
         self.current_player = None
         self.previous_players = []
         self.stats = st.Statcast()
+
+    def new_game(self):
+        self.score = 0
+        self.strikes = 3
+        self.previous_players = []
+        self.hints = [True, True, True, True]
+        self.new_level()
 
     def new_level(self):
         index = random.randint(0, len(self.stats.pitchers))
@@ -21,6 +29,7 @@ class Game:
             self.new_level()
 
         self.current_player.set_pitch_arsenal()
+        print(self.current_player.pitches[0])
         self.previous_players.append(self.current_player.get_name())
 
     def check_answer(self, answer):
@@ -28,7 +37,9 @@ class Game:
             self.score += self.calc_score()
             self.new_level()
         else:
-            self.game_over()
+            self.strikes -= 1
+            if self.strikes == 0:
+                self.game_over()
 
     def reset_hints(self):
         self.hints = [True, True, True, True]
@@ -50,4 +61,3 @@ class Game:
     def game_over(self):
         if self.score > self.high_score:
             self.high_score = self.score
-
