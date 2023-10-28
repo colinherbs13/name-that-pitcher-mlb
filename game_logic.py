@@ -29,7 +29,6 @@ class Game:
             self.new_level()
 
         self.current_player.set_pitch_arsenal()
-        print(self.current_player.pitches[0])
         self.previous_players.append(self.current_player.get_name())
 
     def check_answer(self, answer):

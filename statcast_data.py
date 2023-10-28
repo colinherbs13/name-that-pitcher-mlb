@@ -1,44 +1,46 @@
-import math
-import random
 import pybaseball as pb
 from datetime import date
+import pitcher_db as db
+import requests
 
 # CONSTANTS
 OPENING_DAY = '2023-03-30'
 TODAY = str(date.today())
+database = db.SQL()
+
 NATIONAL_LEAGUE = {
-    'Arizona': 'AZ',
-    'Atlanta': 'ATL',
-    'Chicago': 'CHC',
-    'Cincinnati': 'CIN',
-    'Colorado': 'COL',
-    'Los Angeles': 'LAD',
-    'Miami': 'MIA',
-    'Milwaukee': 'MIL',
-    'New York': 'NYM',
-    'Philadelphia': 'PHI',
-    'Pittsburgh': 'PIT',
-    'San Diego': 'SD',
-    'San Francisco': 'SF',
-    'St. Louis': 'STL',
-    'Washington': 'WSH'
+    'Arizona Diamondbacks': 'AZ',
+    'Atlanta Falcons': 'ATL',
+    'Chicago Cubs': 'CHC',
+    'Cincinnati Reds': 'CIN',
+    'Colorado Rockies': 'COL',
+    'Los Angeles Dodgers': 'LAD',
+    'Miami Marlins': 'MIA',
+    'Milwaukee Brewers': 'MIL',
+    'New York Mets': 'NYM',
+    'Philadelphia Phillies': 'PHI',
+    'Pittsburgh Pirates': 'PIT',
+    'San Diego Padres': 'SD',
+    'San Francisco Giants': 'SF',
+    'St. Louis Cardinals': 'STL',
+    'Washington Nationals': 'WSH'
 }
 AMERICAN_LEAGUE = {
-    'Baltimore': 'BAL',
-    'Boston': 'BOS',
-    'Chicago': 'CWS',
-    'Cleveland': 'CLE',
-    'Detroit': 'DET',
-    'Houston': 'HOU',
-    'Kansas City': 'KC',
-    'Los Angeles': 'LAA',
-    'Minnesota': 'MIN',
-    'New York': 'NYY',
-    'Oakland': 'OAK',
-    'Seattle': 'SEA',
-    'Tampa Bay': 'TB',
-    'Texas': 'TEX',
-    'Toronto': 'TOR'
+    'Baltimore Orioles': 'BAL',
+    'Boston Red Sox': 'BOS',
+    'Chicago White Sox': 'CWS',
+    'Cleveland Guardians': 'CLE',
+    'Detroit Tigers': 'DET',
+    'Houston Astros': 'HOU',
+    'Kansas City Royals': 'KC',
+    'Los Angeles Angels': 'LAA',
+    'Minnesota Twins': 'MIN',
+    'New York Yankees': 'NYY',
+    'Oakland Athletics': 'OAK',
+    'Seattle Mariners': 'SEA',
+    'Tampa Bay Rays': 'TB',
+    'Texas Rangers': 'TEX',
+    'Toronto Blue Jays': 'TOR'
 }
 PITCH_TYPES = {
     'FF': '4-Seam Fastball',
@@ -101,12 +103,18 @@ class Player:
         print(self.raw_stats.keys())
         self.pitches = []
         self.id = raw_stats['mlbID']
+
+        # fields set by set_personal_attributes function
         self.team = None
+        self.birthplace = None
+        self.handedness = None
+        self.jersey_num = None
+        self.awards = []
 
         # These functions set the strings for player name, player position, and player team
         self.set_name()
         self.set_position()
-        self.set_team()
+        self.set_personal_attributes()
 
     def __str__(self):
         """
@@ -209,39 +217,50 @@ class Player:
     def get_name(self):
         return self.first + " " + self.last
 
-    def set_team(self):
+    def set_personal_attributes(self):
         """
         Gets team from raw_stats.
         Since fangraphs only returns city names, determine abbreviation from presets as well as proper team name from
         league returned from fangraphs data. (EX: LAA/LAD, NYY/NYM)
         :return:
         """
-        teams = self.raw_stats['Tm'].split(",")
-        league = self.raw_stats['Lev'].split(",")
-        # last team returned is most recent, max 2 teams returned (might need fixing)
-        self.team = teams[-1]
-        if self.team in NATIONAL_LEAGUE and self.team in AMERICAN_LEAGUE:
-            # if multiple leagues returned, player played in both AL and NL
-            if len(league) > 1:
-                # If other team in list is in the NL, current team must be in AL (2 teams, 2 leagues)
-                if teams[0] in NATIONAL_LEAGUE:
-                    league = "NL"
-                else:
-                    league = "AL"
-            else:
-                league = league[-1]
-        else:
-            # check league if only one team is listed
-            if self.team in NATIONAL_LEAGUE:
-                league = "NL"
-            else:
-                league = "AL"
+        try:
+            team_response = requests.get("https://statsapi.mlb.com/api/v1/people/" + self.id + "?hydrate=currentTeam")
+        except requests.HTTPError as err:
+            print("ERROR GETTING PLAYER INFO: " + err.errno)
+            return
+        print(self.last + " " + self.first)
+        team_data = team_response.json()["people"][0]
+        print(team_data.keys())
+        if "currentTeam" in team_data.keys():
+            self.team = team_data["currentTeam"]["name"]
+        if "birthCountry" in team_data.keys():
+            self.birthplace = team_data["birthCountry"]
+        if "pitchHand" in team_data.keys():
+            self.handedness = team_data["pitchHand"]["code"]
+        if "primaryNumber" in team_data.keys():
+            self.jersey_num = team_data["primaryNumber"]
 
-        # set player's team based on abbreviations in preset objects
-        if league == "NL":
-            self.team = NATIONAL_LEAGUE[self.team]
-        else:
-            self.team = AMERICAN_LEAGUE[self.team]
+    def get_awards(self):
+        try:
+            awards_response = requests.get("https://statsapi.mlb.com/api/v1/people/" + self.id + "?hydrate=awards")
+        except requests.HTTPError as err:
+            print("ERROR GETTING PLAYER AWARDS: " + err.errno)
+            return
+        try:
+            awards_data = awards_response.json()["people"][0]["awards"]
+        except KeyError as key_err:
+            print("Player " + self.id + " has no awards")
+            self.awards = []
+            return
+
+        matches = ["WSCHAMP", "ALSS", "NLSS", "ALCY", "NLCY", "MLBAFIRST", "MLBASECOND", "ALAS", "NLAS", "NLGG", "ALGG",
+                   "ALMVP", "NLMVP", "ASMVP", "ALROY", "NLROY", "WSMVP", "ALCSMVP", "NLCSMVP"]
+        for award in awards_data:
+            if any([x in award["id"] for x in matches]):
+                self.awards.append(award["season"] + " " + award["name"])
+
+        print(self.awards)
 
 
 class Pitch:
@@ -283,6 +302,7 @@ class Pitch:
         :param ls: list of datapoints
         :return: returns average (either float or tuple depending on list)
         """
+        ls = [x for x in ls if str(x) != 'nan']
         length = len(ls)
         if type(ls[0]) is tuple:
             sum_x = 0
@@ -313,10 +333,10 @@ class Statcast:
         :return:
         """
         pitchers = pb.pitching_stats_bref(2023)
-        print(pitchers.iloc[0]['Tm'])
         players = []
         for i in range(len(pitchers)):
             pitcher = pitchers.iloc[i]
             p = Player(pitcher)
+            database.add_pitcher(p)
             players.append(p)
         self.pitchers = players

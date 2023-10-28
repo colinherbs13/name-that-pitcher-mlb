@@ -62,6 +62,7 @@ class MainMenu(QMainWindow):
 
     def start(self):
         self.game_ui.show()
+        self.hide()
 
 
 if __name__ == '__main__':
