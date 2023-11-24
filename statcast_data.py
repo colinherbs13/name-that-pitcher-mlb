@@ -7,7 +7,6 @@ import requests
 OPENING_DAY = '2023-03-30'
 TODAY = str(date.today())
 database = db.SQL()
-
 NATIONAL_LEAGUE = {
     'Arizona Diamondbacks': 'AZ',
     'Atlanta Falcons': 'ATL',
@@ -75,7 +74,7 @@ def _modify_utf_chars(player_name):
     player_name = player_name.replace('\\xc3\\xa1', u'\u00e1')
     player_name = player_name.replace('\\xc3\\xad', u'\u00ed')
     player_name = player_name.replace('\\xc3\\xb3', u'\u00f3')
-    player_name = player_name.replace('\\xc3\\xa9', 'u\u00e9')
+    player_name = player_name.replace('\\xc3\\xa9', u'\u00e9')
     return player_name
 
 
@@ -90,7 +89,7 @@ class Player:
     team(str): Player's current team abbreviation
     """
 
-    def __init__(self, raw_stats):
+    def __init__(self, raw_stats={}, db_init={}):
         """
         Constructor for Player class, sets attributes and calls some functions to set specific attributes
         :param raw_stats: When creating player objects, we first must gather baseball reference data to obtain
@@ -99,11 +98,7 @@ class Player:
         self.position = None
         self.last = None
         self.first = None
-        self.raw_stats = raw_stats
-        print(self.raw_stats.keys())
         self.pitches = []
-        self.id = raw_stats['mlbID']
-
         # fields set by set_personal_attributes function
         self.team = None
         self.birthplace = None
@@ -111,10 +106,24 @@ class Player:
         self.jersey_num = None
         self.awards = []
 
-        # These functions set the strings for player name, player position, and player team
-        self.set_name()
-        self.set_position()
-        self.set_personal_attributes()
+        # if we gather the player information from the DB
+        print(db_init)
+        if db_init:
+            self.id = db_init['id']
+            self.last = db_init['last']
+            self.first = db_init['first']
+            self.position = db_init['position']
+            self.team = db_init['team']
+            self.birthplace = db_init['country']
+            self.handedness = db_init['handedness']
+            self.jersey_num = db_init['jerseynum']
+        else:
+            self.raw_stats = raw_stats
+            self.id = raw_stats['mlbID']
+            # These functions set the strings for player name, player position, and player team
+            self.set_name()
+            self.set_position()
+            self.set_personal_attributes()
 
     def __str__(self):
         """
@@ -152,7 +161,6 @@ class Player:
         spins = []
         locations = []
         zones = []
-        print(data.keys())
         # iterate through each pitch and separate by type, velocity and spin rate
         for i in range(len(data)):
             pitch_data = data.iloc[i]
@@ -326,17 +334,54 @@ class Statcast:
         self.pitchers = []
         self.gather_pitchers()
 
+    def _gather_pitchers_from_db(self):
+        db_pitchers = database.get_pitchers()
+        if len(db_pitchers) == 0:
+            return False
+
+        players = []
+        for p in db_pitchers:
+            raw_stats = {
+                "id": p[0],
+                "last": p[1],
+                "first": p[2],
+                "position": p[3],
+                "team": p[4],
+                "country": p[5],
+                "handedness": p[6],
+                "jerseynum": p[7]
+            }
+            # filter out players not in major league teams
+            if raw_stats["team"] not in NATIONAL_LEAGUE.keys() \
+                    and raw_stats["team"] not in AMERICAN_LEAGUE.keys():
+                continue
+            players.append(Player(raw_stats=None, db_init=raw_stats))
+        self.pitchers = players
+        return True
+
+    def update_pitcher_db(self):
+        players = []
+        pitcher_data = pb.pitching_stats_bref(2023)
+        for i in range(len(pitcher_data)):
+            pitcher = pitcher_data.iloc[i]
+            p = Player(pitcher)
+            players.append(p)
+        database.update_table(players)
+
     def gather_pitchers(self):
         """
         Accesses baseball reference stats for pitchers this year and gathers data into pitchers list.
         Creates player objects for each pitcher as well.
         :return:
         """
-        pitchers = pb.pitching_stats_bref(2023)
         players = []
-        for i in range(len(pitchers)):
-            pitcher = pitchers.iloc[i]
-            p = Player(pitcher)
-            database.add_pitcher(p)
-            players.append(p)
-        self.pitchers = players
+
+        if not self._gather_pitchers_from_db():
+            # if there is no data in the DB, get data from the API and populate the DB
+            pitchers = pb.pitching_stats_bref(2023)
+            for i in range(len(pitchers)):
+                pitcher = pitchers.iloc[i]
+                p = Player(pitcher)
+                players.append(p)
+            self.update_pitcher_db()
+            self.pitchers = players

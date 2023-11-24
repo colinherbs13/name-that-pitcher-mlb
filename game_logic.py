@@ -4,6 +4,7 @@ import random
 
 import statcast_data as st
 
+
 class Game:
     def __init__(self):
         self.score = 0
@@ -44,7 +45,7 @@ class Game:
         self.hints = [True, True, True, True]
 
     def set_hint(self, index):
-        assert(0 <= index < 4)
+        assert (0 <= index < 4)
         self.hints[index] = False
 
     def get_hints(self):

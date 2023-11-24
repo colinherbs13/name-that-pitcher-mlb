@@ -34,22 +34,31 @@ class SQL:
         try:
             self.cursor.execute(f"INSERT INTO {self.table_name} "
                                 f"(PlayerID, FirstName, LastName, Position, Team, Birthplace, Handedness, JerseyNum)\n"
-                                f"VALUES ({pitcher.id}, \'{pitcher.first}\', \'{pitcher.last}\', \'{pitcher.position}\', "
-                                f"\'{pitcher.team}\', \'{pitcher.birthplace}\', "
-                                f"\'{pitcher.handedness}\', {pitcher.jersey_num})")
+                                f"VALUES ({pitcher.id}, "
+                                f"\'{pitcher.first}\', "
+                                f"\'{pitcher.last}\', "
+                                f"\'{pitcher.position}\', "
+                                f"\'{pitcher.team}\', "
+                                f"\'{pitcher.birthplace}\', "
+                                f"\'{pitcher.handedness}\', "
+                                f"{pitcher.jersey_num})")
             self.db.commit()
         except mysql.connector.errors.IntegrityError as e:
             print(e)
 
     def update_table(self, pitcher_list):
         for pitcher in pitcher_list:
-            self.cursor.execute(f"UPDATE {self.table_name} "
-                                f"SET LastName = {pitcher.last}"
-                                f"FirstName = {pitcher.first}"
-                                f"Position = {pitcher.position}"
-                                f"Team = {pitcher.team}"
-                                f"Birthplace = {pitcher.birthplace}"
-                                f"Handedness = {pitcher.handedness}"
-                                f"JerseyNum = {pitcher.jersey_num}"
-                                f"WHERE PlayerID = {pitcher.id}")
-            self.db.commit()
+            print(pitcher)
+            try:
+                self.cursor.execute(f"UPDATE {self.table_name}\n"
+                                    f"SET LastName = \"{pitcher.last}\", "
+                                    f"FirstName = \"{pitcher.first}\", "
+                                    f"Position = \"{pitcher.position}\", "
+                                    f"Team = \"{pitcher.team}\", "
+                                    f"Birthplace = \"{pitcher.birthplace}\", "
+                                    f"Handedness = \"{pitcher.handedness}\", "
+                                    f"JerseyNum = {pitcher.jersey_num}\n"
+                                    f"WHERE PlayerID = {pitcher.id};")
+                self.db.commit()
+            except mysql.connector.errors.Error as e:
+                print(e)

@@ -5,6 +5,7 @@ from PyQt5.QtGui import *
 import game_logic as gl
 import help_screen as hs
 
+
 class GameUI(QMainWindow):
     def __init__(self):
         super().__init__()
