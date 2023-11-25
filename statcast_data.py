@@ -44,6 +44,7 @@ AMERICAN_LEAGUE = {
 PITCH_TYPES = {
     'FF': '4-Seam Fastball',
     'FA': '4-Seam Fastball',
+    'PO': '4-Seam Fastball',
     'SI': 'Sinker',
     'FT': 'Sinker',
     'CU': 'Curveball',
@@ -234,12 +235,11 @@ class Player:
         """
         try:
             team_response = requests.get("https://statsapi.mlb.com/api/v1/people/" + self.id + "?hydrate=currentTeam")
+            print(team_response)
         except requests.HTTPError as err:
             print("ERROR GETTING PLAYER INFO: " + err.errno)
             return
-        print(self.last + " " + self.first)
         team_data = team_response.json()["people"][0]
-        print(team_data.keys())
         if "currentTeam" in team_data.keys():
             self.team = team_data["currentTeam"]["name"]
         if "birthCountry" in team_data.keys():
@@ -251,14 +251,14 @@ class Player:
 
     def get_awards(self):
         try:
-            awards_response = requests.get("https://statsapi.mlb.com/api/v1/people/" + self.id + "?hydrate=awards")
+            awards_response = requests.get(f"https://statsapi.mlb.com/api/v1/people/{str(self.id)}?hydrate=awards")
         except requests.HTTPError as err:
             print("ERROR GETTING PLAYER AWARDS: " + err.errno)
             return
         try:
             awards_data = awards_response.json()["people"][0]["awards"]
+            print(awards_data)
         except KeyError as key_err:
-            print("Player " + self.id + " has no awards")
             self.awards = []
             return
 

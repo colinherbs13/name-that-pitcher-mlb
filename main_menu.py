@@ -39,6 +39,7 @@ class MainMenu(QMainWindow):
         self.exit_button.setGeometry(0, 0, 30, 30)
         self.help_button.setGeometry(self.width() - 30, 0, 30, 30)
         self.update_data_button.setGeometry(self.width() - 1000, 1000, 100, 100)
+        self.update_data_button.adjustSize()
         self.hs_text_label.adjustSize()
         self.hs_score_label.setText("00")
         self.hs_text_label.move(int((self.geometry().width() / 2)), 100)
