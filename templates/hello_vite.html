@@ -1,0 +1,18 @@
+{% load django_vite %}
+<html>
+<head>
+    <title>Getting Started with Django and Vite</title>
+
+    <!-- This handles the HMR socket connection -->
+    {% vite_hmr_client %}
+
+    <!-- THIS FIXES THE PREAMBLE ERROR AUTOMATICALLY -->
+    {% vite_react_refresh %}
+</head>
+<body>
+    <!-- Fixed: Do not use self-closing tags like <div /> in standard HTML -->
+    <div id="root"></div>
+
+    {% vite_asset 'main.tsx' %}
+</body>
+</html>

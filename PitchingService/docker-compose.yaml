@@ -1,0 +1,33 @@
+version: '2'
+
+services:
+  pitchingservice:
+    build: .
+    image: pitchingservice
+    container_name: pitchingservice
+    command: python ./pitcher_db.py &
+    volumes:
+      - .:/code
+    ports:
+      - "7050:7050"
+    links:
+      - 'mysql_db'
+    depends_on:
+      - mysql_db
+    networks:
+      - app-tier
+
+  mysql_db:
+    image: mysql:8.0.34
+    ports:
+      - '3307:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: "user"
+      MYSQL_DATABASE: "pitchers"
+      MYSQL_USER: "user"
+      MYSQL_PASSWORD: ""
+    networks:
+      - app-tier
+networks:
+  app-tier:
+    driver: bridge
