@@ -1,9 +1,18 @@
 {
   "main.tsx": {
-    "file": "assets/index-D64VDMd1.css",
+    "file": "css/index.css",
     "src": "main.tsx",
     "css": [
-      "assets/index-D64VDMd1.css"
+      "css/index.css"
     ]
+  },
+  "styles/styles.css": {
+    "file": "css/style.css",
+    "name": "style",
+    "names": [
+      "style.css"
+    ],
+    "src": "styles/styles.css",
+    "isEntry": true
   }
 }

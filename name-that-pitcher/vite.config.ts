@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
@@ -18,9 +19,11 @@ export default defineConfig({
       // Your JavaScript/TypeScript entry point
       input: {
         'index': path.resolve(__dirname, './src/main.tsx'),
+        'style': path.resolve(__dirname, './src/styles/styles.css'),
       },
       output: {
-        entryFileNames: `ts/[name]-bundle.ts`
+        entryFileNames: `ts/[name]-bundle.ts`,
+        assetFileNames: `css/[name].css`
       }
     },
   },
@@ -32,5 +35,5 @@ export default defineConfig({
     port: 5173,
   },
 
-  plugins: [react()]
+  plugins: [react(), tailwindcss()]
 });

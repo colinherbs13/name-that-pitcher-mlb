@@ -1,10 +1,13 @@
 import './App.css'
+import Header from './components/Header.tsx'
+import Game from './components/GameUI.tsx'
 
 function App() {
 
   return (
     <>
-      <h3>This is a test</h3>
+      <Header highscore={1}></Header>
+      <Game></Game>
     </>
   )
 }
