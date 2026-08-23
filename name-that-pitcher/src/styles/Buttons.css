@@ -1,0 +1,17 @@
+.headerButton {
+    transition: color 0.3s ease-in-out;
+    margin-left: 25px;
+}
+
+.headerButton:hover {
+    color: white;
+}
+
+.giveUp {
+    color: darkred;
+    transition: color 0.3s ease-in-out;
+}
+
+.giveUp:hover {
+    color: red;
+}

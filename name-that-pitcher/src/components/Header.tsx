@@ -1,5 +1,10 @@
 // @ts-ignore
-function Header({highscore}) {
+import '../styles/Buttons.css'
+import {Settings, CircleQuestionMark} from 'lucide-react'
+import { FaGithub } from 'react-icons/fa';
+
+function Header() {
+
   return (
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 dark:bg-gray-900/80 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,10 +17,17 @@ function Header({highscore}) {
               <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Name That Pitcher Game</span>
             </div>
 
-            <div>
-              <p>High Score: {highscore}</p>
+            <div className="flex">
+                <button className={"headerButton"}>
+                    <CircleQuestionMark size={25}/>
+                </button>
+                <button className={"headerButton"}>
+                    <FaGithub size={25}/>
+                </button>
+                <button className={"headerButton"}>
+                    <Settings size={25}/>
+                </button>
             </div>
-
           </div>
         </div>
       </header>

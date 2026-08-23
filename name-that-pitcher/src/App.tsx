@@ -6,7 +6,7 @@ function App() {
 
   return (
     <>
-      <Header highscore={1}></Header>
+      <Header></Header>
       <Game></Game>
     </>
   )

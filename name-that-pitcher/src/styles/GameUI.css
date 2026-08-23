@@ -1,0 +1,9 @@
+#hints {
+    display: inline-flex;
+    gap: 5px;
+}
+
+.game {
+    display: inline-block;
+    justify-content: center;
+}
