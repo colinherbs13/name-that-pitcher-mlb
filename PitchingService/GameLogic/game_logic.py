@@ -1,8 +1,7 @@
 import sys
 import math
 import random
-
-from source.PitchingService.BaseballData import statcast_data as st
+from BaseballData import statcast_data as st
 
 
 class Game:

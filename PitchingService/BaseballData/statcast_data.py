@@ -1,12 +1,15 @@
 import pybaseball as pb
 from datetime import date
-from source.PitchingService.BaseballData import pitcher_db as db
+
+from django.db import transaction
+
+import PitchingService.BaseballData.pitcher_db as db
 import requests
 
 # CONSTANTS
-OPENING_DAY = '2023-03-30'
+OPENING_DAY = '2026-03-26'
 TODAY = str(date.today())
-database = db.SQL()
+
 NATIONAL_LEAGUE = {
     'Arizona Diamondbacks': 'AZ',
     'Atlanta Falcons': 'ATL',
@@ -90,7 +93,7 @@ class Player:
     team(str): Player's current team abbreviation
     """
 
-    def __init__(self, raw_stats={}, db_init={}):
+    def __init__(self, raw_stats={}, db_init=False):
         """
         Constructor for Player class, sets attributes and calls some functions to set specific attributes
         :param raw_stats: When creating player objects, we first must gather baseball reference data to obtain
@@ -105,22 +108,23 @@ class Player:
         self.birthplace = None
         self.handedness = None
         self.jersey_num = None
+        self.age = 0
         self.awards = []
 
         # if we gather the player information from the DB
-        print(db_init)
         if db_init:
             self.id = db_init['id']
-            self.last = db_init['last']
-            self.first = db_init['first']
+            self.name = db_init['name']
             self.position = db_init['position']
             self.team = db_init['team']
             self.birthplace = db_init['country']
             self.handedness = db_init['handedness']
             self.jersey_num = db_init['jerseynum']
+            self.age = db_init['age']
         else:
             self.raw_stats = raw_stats
             self.id = raw_stats['mlbID']
+            self.age = raw_stats['Age']
             # These functions set the strings for player name, player position, and player team
             self.set_name()
             self.set_position()
@@ -132,8 +136,7 @@ class Player:
         :return: returns string representation of player
         """
         ret = "PLAYER INFO: \n"
-        ret += "First Name: " + self.first + "\n"
-        ret += "Last Name: " + self.last + "\n"
+        ret += "Name" + self.name + "\n"
         ret += "Team: " + self.team + "\n"
         ret += "Position " + self.position + "\n"
         ret += "ID: " + str(self.id) + "\n\n"
@@ -141,6 +144,30 @@ class Player:
         for i in range(len(self.pitches)):
             ret += str(self.pitches[i]) + "\n"
         return ret
+
+    def __dict__(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "jersey_number": self.jersey_num,
+            "team": self.team,
+            "age": self.age,
+            "birthplace": self.birthplace,
+            "position":  self.position,
+            "handedness": self.handedness
+        }
+
+    def upsert_db_entry(self):
+        existing_pitchers = db.Pitcher.objects.filter(id=self.id).update(comments_on=False)
+        # if update fails
+        if existing_pitchers == 0:
+            db.Pitcher.objects.create(**self.__dict__, comments_on=False)
+
+    def delete_db_entry(self):
+        try:
+            db.Pitcher.objects.delete(id=self.id)
+        except Exception as e:
+            print("Failed to delete Player. ID: " + self.id)
 
     def set_pitch_arsenal(self):
         """
@@ -189,7 +216,7 @@ class Player:
         for j in range(len(pitches)):
             try:
                 index = pitches.index(pitches[j])
-                pitch = Pitch(PITCH_TYPES[pitches[j]], velocities[index], spins[index], locations[index], zones[index])
+                pitch = Pitch(self.id, PITCH_TYPES[pitches[j]], velocities[index], spins[index], locations[index], zones[index])
                 self.pitches.append(pitch)
             except KeyError:
                 continue
@@ -202,6 +229,7 @@ class Player:
         """
         games = self.raw_stats['G']
         starts = self.raw_stats['GS']
+        innings = self.raw_stats['IP']
         # A pitcher is a qualified starter if they make 3 starts
         if starts >= 3:
             # some pitchers can be openers - check if they meet both starter and reliever requirements
@@ -212,6 +240,10 @@ class Player:
             self.position = "SP"
             return
         else:
+            # Accounts for starters who made minimal starts due to injury, but go > 5 innings per appearance
+            if innings / games >= 5:
+                self.position = "SP"
+                return
             # default to reliever role
             self.position = "RP"
             return
@@ -221,13 +253,11 @@ class Player:
         Gets name from raw stats and calls _modify_utf_chars to replace special characters
         :return: None
         """
-        self.last = " ".join(self.raw_stats['Name'].split()[1:])
-        self.first = self.raw_stats['Name'].split()[0]
-        self.last = _modify_utf_chars(self.last)
-        self.first = _modify_utf_chars(self.first)
-
-    def get_name(self):
-        return self.first + " " + self.last
+        last = " ".join(self.raw_stats['Name'].split()[1:])
+        first = self.raw_stats['Name'].split()[0]
+        last = _modify_utf_chars(last)
+        first = _modify_utf_chars(first)
+        self.name = f'{first} {last}'
 
     def set_personal_attributes(self):
         """
@@ -282,13 +312,14 @@ class Pitch:
     spin(int): Average spin rate of pitch (RPM)
     """
 
-    def __init__(self, p_type, velo, spin, loc, zone):
+    def __init__(self, player_id, p_type, velo, spin, loc, zone):
         """
         Constructor for Pitch class, sets attributes passed in when player pitch arsenal is gathered.
         :param p_type: pitch type
         :param velo: average velocity
         :param spin: average spin rate
         """
+        self.player_id = player_id
         self.p_type = p_type
         self.velo = self._set_average_of(velo)
         self.spin = self._set_average_of(spin)
@@ -306,6 +337,17 @@ class Pitch:
         ret += "Average Pitch Location: " + str(self._set_average_of(self.locations)) + "\n"
         ret += "Average Strike Zone: " + str(self.zone) + "\n"
         return ret
+
+    def __dict__(self):
+        return {
+            "id": self.p_type + "_" + str(self.player_id),
+            "player_id": self.player_id,
+            "pitch_type": self.p_type,
+            "velocity": self.velo,
+            "spin": self.spin,
+            "location": self.locations,
+            "zone": self.zone
+        }
 
     def _set_average_of(self, ls):
         """
@@ -326,65 +368,32 @@ class Pitch:
             return sum(ls) / len(ls)
 
 
-class Statcast:
-    """
-    Statcast class is a container for players and their statistics
-    Attributes - pitchers: list of active pitchers
-    Public Methods - gather_pitchers(): used to gather active pitchers from bbref data
-    """
+def populate_pitcher_db():
+    pitcher_data = pb.pitching_stats_bref(2026)
+    existing_ids = set(
+        db.Pitcher.objects.filter(id__in=pitcher_data['mlbID'].tolist())
+        .values_list('id', flat=True)
+    )
+    records = pitcher_data.to_dict(orient='records')
+    players = []
+    with transaction.atomic():
+        for row in records:
+            # Check if the pitcher already exists in your database
+            is_existing = row['mlbID'] in existing_ids
 
-    def __init__(self):
-        self.pitchers = []
-        self.gather_pitchers()
+            # Instantiate with your required db_init parameter
+            p = Player(row, db_init=is_existing)
+            p.set_pitch_arsenal()
+            players.append(p.__dict__())
+            print(f"Provisioned {row['Name']}")
+            new_pitcher, _ = db.Pitcher.objects.update_or_create(
+                **players[-1]
+            )
+            print(p.pitches)
 
-    def _gather_pitchers_from_db(self):
-        db_pitchers = database.get_pitchers()
-        if len(db_pitchers) == 0:
-            return False
+            for pitch in p.pitches:
+                pitch_data = pitch.__dict__()
 
-        players = []
-        for p in db_pitchers:
-            raw_stats = {
-                "id": p[0],
-                "last": p[1],
-                "first": p[2],
-                "position": p[3],
-                "team": p[4],
-                "country": p[5],
-                "handedness": p[6],
-                "jerseynum": p[7]
-            }
-            # filter out players not in major league teams
-            if raw_stats["team"] not in NATIONAL_LEAGUE.keys() \
-                    and raw_stats["team"] not in AMERICAN_LEAGUE.keys():
-                continue
-            players.append(Player(raw_stats=None, db_init=raw_stats))
-        self.pitchers = players
-        return True
-
-    def update_pitcher_db(self):
-        players = []
-        pitcher_data = pb.pitching_stats_bref(2023)
-        for i in range(len(pitcher_data)):
-            pitcher = pitcher_data.iloc[i]
-            p = Player(pitcher)
-            players.append(p)
-        database.update_table(players)
-
-    def gather_pitchers(self):
-        """
-        Accesses baseball reference stats for pitchers this year and gathers data into pitchers list.
-        Creates player objects for each pitcher as well.
-        :return:
-        """
-        players = []
-
-        if not self._gather_pitchers_from_db():
-            # if there is no data in the DB, get data from the API and populate the DB
-            pitchers = pb.pitching_stats_bref(2023)
-            for i in range(len(pitchers)):
-                pitcher = pitchers.iloc[i]
-                p = Player(pitcher)
-                players.append(p)
-            self.update_pitcher_db()
-            self.pitchers = players
+                db.PitchingStats.objects.update_or_create(
+                    **pitch_data
+                )

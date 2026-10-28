@@ -2,8 +2,12 @@
 import '../styles/Buttons.css'
 import {Settings, CircleQuestionMark} from 'lucide-react'
 import { FaGithub } from 'react-icons/fa';
+import {useContext} from "react";
+import {AppContext} from "../App.tsx";
+
 
 function Header() {
+    const {setInfo, setSettings} = useContext(AppContext)
 
   return (
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 dark:bg-gray-900/80 dark:border-gray-800">
@@ -18,13 +22,13 @@ function Header() {
             </div>
 
             <div className="flex">
-                <button className={"headerButton"}>
+                <button className={"headerButton"} onClick={() => setInfo(true)}>
                     <CircleQuestionMark size={25}/>
                 </button>
-                <button className={"headerButton"}>
+                <a className={"headerButton"} href={"https://colinherbs13.github.io"} target="_blank" rel="noopener noreferrer">
                     <FaGithub size={25}/>
-                </button>
-                <button className={"headerButton"}>
+                </a>
+                <button className={"headerButton"} onClick={() => setSettings(true)}>
                     <Settings size={25}/>
                 </button>
             </div>

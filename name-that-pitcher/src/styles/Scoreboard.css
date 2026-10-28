@@ -1,0 +1,43 @@
+.scoreboard {
+    background: #3b5c51;
+    border: 10px solid white;
+    justify-content: center;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    padding: 15px;
+    border-radius: 30px;
+    width: 60%;
+}
+
+.scoreRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #2a2a2a;
+    padding: 10px 15px;
+    border-radius: 8px;
+}
+.label {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+.lights {
+    display: flex;
+    gap: 10px;
+    margin-left: 10px;
+}
+.light {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background-color: #444;
+    border: 2px solid #222;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+/* Light colors when active */
+.strike.active {
+    background-color: #ff0000;
+    box-shadow: 0 0 10px #fa4a4a;
+}

@@ -1,0 +1,24 @@
+#backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+
+  /* Centering Core */
+  display: flex;
+  justify-content: center; /* Horizontally centers the child */
+  align-items: center;     /* Vertically centers the child */
+}
+
+#window {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+
+  /* Dimensions can safely be automatic, explicit, or percentages */
+  width: auto;
+  height: auto;
+}

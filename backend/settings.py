@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_vite'
+    'django_vite',
+    "PitchingService"
 ]
 
 MIDDLEWARE = [
@@ -121,7 +122,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'name-that-pitcher/static')
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
-    BASE_DIR / "name-that-pitcher/global",
+    BASE_DIR / "name-that-pitcher/global/assets",
 ]
 
 # Default primary key field type
